@@ -4,6 +4,15 @@ import * as Haptics from 'expo-haptics';
 import * as Audio from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Session record type for history
+export type SessionRecord = {
+  id: string;
+  type: 'work' | 'shortBreak' | 'longBreak';
+  duration: number;
+  completedAt: string;
+  status: 'completed' | 'skipped';
+};
+
 // Configure notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -181,6 +190,27 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Save session to history
+  const saveSession = async (type: SessionType, duration: number, status: 'completed' | 'skipped') => {
+    try {
+      const session: SessionRecord = {
+        id: Date.now().toString(),
+        type,
+        duration,
+        completedAt: new Date().toISOString(),
+        status,
+      };
+      
+      const stored = await AsyncStorage.getItem('pomodoro-history');
+      const sessions: SessionRecord[] = stored ? JSON.parse(stored) : [];
+      sessions.push(session);
+      
+      await AsyncStorage.setItem('pomodoro-history', JSON.stringify(sessions));
+    } catch (e) {
+      console.error('Failed to save session:', e);
+    }
+  };
+
   const getSessionDuration = (session: SessionType): number => {
     switch (session) {
       case 'work':
@@ -199,9 +229,15 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
     setIsRunning(false);
 
+    // Get the session duration before changing state
+    const durationMinutes = Math.floor(getSessionDuration(currentSession) / 60);
+
     // Play sound and trigger haptic
     await playSound();
     await triggerHaptic();
+
+    // Save session to history
+    await saveSession(currentSession, durationMinutes, 'completed');
 
     // Send notification based on session type
     if (currentSession === 'work') {
@@ -279,6 +315,13 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
   const skipSession = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // Get the session duration before changing state
+    const durationMinutes = Math.floor(getSessionDuration(currentSession) / 60);
+    
+    // Save skipped session
+    await saveSession(currentSession, durationMinutes, 'skipped');
+    
     if (currentSession === 'work') {
       if (sessionCount >= settings.sessionsUntilLongBreak) {
         setCurrentSession('longBreak');
