@@ -1,0 +1,5 @@
+=== US-001: Project Setup & Design System ===
+COMPLETED: 2026-02-23T03:45:00+03:00
+FILES CHANGED: app/_layout.tsx, app/(tabs)/_layout.tsx, app/(tabs)/index.tsx, app/(tabs)/history.tsx, app/(tabs)/settings.tsx, app.json, package.json, package-lock.json, eslint.config.js, src/contexts/TimerContext.tsx, PRD.md
+KEY DECISIONS: Used expo-router for file-based navigation with 3 tabs. Created TimerContext that handles both timer state and settings. Used dark theme by default with rose accent (#e94560). Used emoji icons for tabs (simple approach).
+DEPENDENCIES ADDED: expo-google-fonts, @expo/vector-icons (already present)
