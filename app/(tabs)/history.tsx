@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../../src/contexts/ThemeContext';
 
 type SessionRecord = {
   id: string;
@@ -12,6 +13,7 @@ type SessionRecord = {
 
 export default function HistoryScreen() {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const { colors } = useTheme();
 
   useEffect(() => {
     loadHistory();
@@ -79,8 +81,99 @@ export default function HistoryScreen() {
   };
 
   const getStatusColor = (status: string): string => {
-    return status === 'completed' ? '#10B981' : '#F59E0B';
+    return status === 'completed' ? colors.success : colors.warning;
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: 20,
+    },
+    summary: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 20,
+    },
+    summaryTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 16,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+    },
+    stat: {
+      alignItems: 'center',
+    },
+    statValue: {
+      color: colors.accent,
+      fontSize: 24,
+      fontWeight: 'bold',
+    },
+    statLabel: {
+      color: colors.textMuted,
+      fontSize: 14,
+      marginTop: 4,
+    },
+    historyHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    historyTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    clearButton: {
+      color: colors.error,
+      fontSize: 14,
+    },
+    sessionItem: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    sessionInfo: {
+      flex: 1,
+    },
+    sessionType: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    sessionDate: {
+      color: colors.textMuted,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    sessionRight: {
+      alignItems: 'flex-end',
+    },
+    sessionDuration: {
+      color: colors.text,
+      fontSize: 14,
+    },
+    sessionStatus: {
+      fontSize: 12,
+      marginTop: 4,
+      textTransform: 'capitalize',
+    },
+    emptyText: {
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: 40,
+    },
+  });
 
   const renderSession = ({ item }: { item: SessionRecord }) => (
     <View style={styles.sessionItem}>
@@ -135,94 +228,3 @@ export default function HistoryScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-    padding: 20,
-  },
-  summary: {
-    backgroundColor: '#252542',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-  },
-  summaryTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  stat: {
-    alignItems: 'center',
-  },
-  statValue: {
-    color: '#e94560',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  historyTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  clearButton: {
-    color: '#e94560',
-    fontSize: 14,
-  },
-  sessionItem: {
-    backgroundColor: '#252542',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sessionInfo: {
-    flex: 1,
-  },
-  sessionType: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  sessionDate: {
-    color: '#666',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sessionRight: {
-    alignItems: 'flex-end',
-  },
-  sessionDuration: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  sessionStatus: {
-    fontSize: 12,
-    marginTop: 4,
-    textTransform: 'capitalize',
-  },
-  emptyText: {
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 40,
-  },
-});

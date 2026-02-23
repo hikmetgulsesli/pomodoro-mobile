@@ -1,15 +1,70 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useSettings } from '../../src/contexts/TimerContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function SettingsScreen() {
   const { settings, updateSettings, resetSettings } = useSettings();
+  const { colors } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 20,
+    },
+    section: {
+      marginBottom: 30,
+    },
+    sectionTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 16,
+    },
+    setting: {
+      marginBottom: 20,
+    },
+    toggleSetting: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    label: {
+      color: colors.text,
+      fontSize: 16,
+    },
+    slider: {
+      width: '100%',
+      height: 40,
+      marginTop: 8,
+    },
+    resetButton: {
+      backgroundColor: colors.surface,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    resetButtonText: {
+      color: colors.error,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Timer Durations</Text>
-        
+
         <View style={styles.setting}>
           <Text style={styles.label}>Work Duration: {settings.workDuration} min</Text>
           <Slider
@@ -19,9 +74,9 @@ export default function SettingsScreen() {
             step={1}
             value={settings.workDuration}
             onValueChange={(value) => updateSettings({ workDuration: value })}
-            minimumTrackTintColor="#e94560"
-            maximumTrackTintColor="#333"
-            thumbTintColor="#e94560"
+            minimumTrackTintColor={colors.timerWork}
+            maximumTrackTintColor={colors.surfaceAlt}
+            thumbTintColor={colors.timerWork}
           />
         </View>
 
@@ -34,9 +89,9 @@ export default function SettingsScreen() {
             step={1}
             value={settings.shortBreakDuration}
             onValueChange={(value) => updateSettings({ shortBreakDuration: value })}
-            minimumTrackTintColor="#10B981"
-            maximumTrackTintColor="#333"
-            thumbTintColor="#10B981"
+            minimumTrackTintColor={colors.timerShortBreak}
+            maximumTrackTintColor={colors.surfaceAlt}
+            thumbTintColor={colors.timerShortBreak}
           />
         </View>
 
@@ -49,9 +104,9 @@ export default function SettingsScreen() {
             step={1}
             value={settings.longBreakDuration}
             onValueChange={(value) => updateSettings({ longBreakDuration: value })}
-            minimumTrackTintColor="#3B82F6"
-            maximumTrackTintColor="#333"
-            thumbTintColor="#3B82F6"
+            minimumTrackTintColor={colors.timerLongBreak}
+            maximumTrackTintColor={colors.surfaceAlt}
+            thumbTintColor={colors.timerLongBreak}
           />
         </View>
 
@@ -64,23 +119,23 @@ export default function SettingsScreen() {
             step={1}
             value={settings.sessionsUntilLongBreak}
             onValueChange={(value) => updateSettings({ sessionsUntilLongBreak: value })}
-            minimumTrackTintColor="#8B5CF6"
-            maximumTrackTintColor="#333"
-            thumbTintColor="#8B5CF6"
+            minimumTrackTintColor={colors.primary}
+            maximumTrackTintColor={colors.surfaceAlt}
+            thumbTintColor={colors.primary}
           />
         </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notifications</Text>
-        
+
         <View style={styles.toggleSetting}>
           <Text style={styles.label}>Sound</Text>
           <Switch
             value={settings.soundEnabled}
             onValueChange={(value) => updateSettings({ soundEnabled: value })}
-            trackColor={{ false: '#333', true: '#e94560' }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.surfaceAlt, true: colors.primary }}
+            thumbColor={colors.text}
           />
         </View>
 
@@ -89,22 +144,22 @@ export default function SettingsScreen() {
           <Switch
             value={settings.vibrationEnabled}
             onValueChange={(value) => updateSettings({ vibrationEnabled: value })}
-            trackColor={{ false: '#333', true: '#e94560' }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.surfaceAlt, true: colors.primary }}
+            thumbColor={colors.text}
           />
         </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Appearance</Text>
-        
+
         <View style={styles.toggleSetting}>
           <Text style={styles.label}>Dark Theme</Text>
           <Switch
             value={settings.theme === 'dark'}
             onValueChange={(value) => updateSettings({ theme: value ? 'dark' : 'light' })}
-            trackColor={{ false: '#333', true: '#e94560' }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.surfaceAlt, true: colors.primary }}
+            thumbColor={colors.text}
           />
         </View>
       </View>
@@ -115,54 +170,3 @@ export default function SettingsScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-  },
-  content: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  setting: {
-    marginBottom: 20,
-  },
-  toggleSetting: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  label: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-    marginTop: 8,
-  },
-  resetButton: {
-    backgroundColor: '#333',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  resetButtonText: {
-    color: '#e94560',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

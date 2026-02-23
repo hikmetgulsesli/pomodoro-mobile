@@ -1,7 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
+import * as Audio from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Configure notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 type SessionType = 'work' | 'shortBreak' | 'longBreak';
 
@@ -55,26 +67,47 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [isRunning, setIsRunning] = useState(false);
   const [currentSession, setCurrentSession] = useState<SessionType>('work');
   const [sessionCount, setSessionCount] = useState(1);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const notificationListenerRef = useRef<Notifications.Subscription | null>(null);
+  const responseListenerRef = useRef<Notifications.Subscription | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
 
+  // Initialize notification channel and permissions
   useEffect(() => {
-    loadSettings();
-    requestNotificationPermissions();
+    initializeNotifications();
+    
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (notificationListenerRef.current) {
+        Notifications.removeNotificationSubscription(notificationListenerRef.current);
+      }
+      if (responseListenerRef.current) {
+        Notifications.removeNotificationSubscription(responseListenerRef.current);
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      unloadSound();
     };
   }, []);
 
-  const loadSettings = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('pomodoro-settings');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed, theme: (parsed.theme || "dark") as "dark" | "light" });
-      }
-    } catch (e) {
-      console.error('Failed to load settings:', e);
-    }
+  const initializeNotifications = async () => {
+    // Configure Android notification channel
+    await Notifications.setNotificationChannelAsync('pomodoro-timer', {
+      name: 'Pomodoro Timer',
+      importance: Notifications.AndroidImportance.High,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#10B981',
+      sound: 'default',
+    });
+    
+    // Request permissions
+    await requestNotificationPermissions();
+    
+    // Handle notification tap to bring app to foreground
+    responseListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      // Notification was tapped - app will automatically come to foreground
+      console.log('Notification tapped:', response.notification.request.content.title);
+    });
   };
 
   const requestNotificationPermissions = async () => {
@@ -84,17 +117,50 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const sendNotification = async (title: string, body: string) => {
-    await Notifications.scheduleNotificationAsync({
-      content: { title, body },
-      trigger: null,
-    });
+  // Load and play sound
+  const playSound = async () => {
+    if (!settings.soundEnabled) return;
+    
+    try {
+      // Unload previous sound if exists
+      await unloadSound();
+      
+      // Create and play new sound
+      const { sound } = await Audio.Sound.createAsync(
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../assets/sounds/timer-complete.mp3'),
+        { shouldPlay: true, volume: 1.0 }
+      );
+      soundRef.current = sound;
+      
+      // Cleanup after playing
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          unloadSound();
+        }
+      });
+    } catch (error) {
+      console.log('Error playing sound:', error);
+      // Fallback: try system notification sound
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: { title: 'Timer Complete', body: 'Timer finished' },
+          trigger: null,
+        });
+      } catch (e) {
+        console.log('Fallback notification failed:', e);
+      }
+    }
   };
 
-  const playSound = async () => {
-    if (settings.soundEnabled) {
-      // Sound will be added once audio file is in place
-      console.log('Sound notification');
+  const unloadSound = async () => {
+    if (soundRef.current) {
+      try {
+        await soundRef.current.unloadAsync();
+      } catch {
+        // Ignore unload errors
+      }
+      soundRef.current = null;
     }
   };
 
@@ -102,6 +168,17 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     if (settings.vibrationEnabled) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+  };
+
+  const sendNotification = async (title: string, body: string) => {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: { sessionType: currentSession },
+      },
+      trigger: null,
+    });
   };
 
   const getSessionDuration = (session: SessionType): number => {
@@ -122,9 +199,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
     setIsRunning(false);
 
+    // Play sound and trigger haptic
     await playSound();
     await triggerHaptic();
 
+    // Send notification based on session type
     if (currentSession === 'work') {
       await sendNotification('Time for a break!', 'Great work! Take a break now.');
       if (sessionCount >= settings.sessionsUntilLongBreak) {
@@ -145,6 +224,24 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentSession, sessionCount, settings]);
 
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('pomodoro-settings');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setSettings({ ...DEFAULT_SETTINGS, ...parsed, theme: (parsed.theme || 'dark') as 'dark' | 'light' });
+      }
+    } catch (e) {
+      console.error('Failed to load settings:', e);
+    }
+  };
+
+  // Timer countdown effect
   useEffect(() => {
     if (isRunning && timeRemaining > 0) {
       intervalRef.current = setInterval(() => {
@@ -218,7 +315,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         value={{
           settings,
           updateSettings: async (newSettings) => {
-            const updated = { ...settings, ...newSettings, theme: (newSettings.theme || settings.theme) as "dark" | "light" };
+            const updated = { ...settings, ...newSettings, theme: (newSettings.theme || settings.theme) as 'dark' | 'light' };
             setSettings(updated);
             await AsyncStorage.setItem('pomodoro-settings', JSON.stringify(updated));
           },
