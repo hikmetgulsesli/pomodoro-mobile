@@ -8,19 +8,19 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.accent || '#f43f5e',
-        tabBarInactiveTintColor: colors.textMuted || '#666',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: colors.surface || '#1a1a2e',
-          borderTopColor: colors.border || '#333',
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
         },
         headerStyle: {
-          backgroundColor: colors.surface || '#1a1a2e',
+          backgroundColor: colors.surface,
         },
-        headerTintColor: colors.text || '#fff',
+        headerTintColor: colors.text,
         headerTitleStyle: {
           fontWeight: 'bold',
           fontFamily: 'Sora',

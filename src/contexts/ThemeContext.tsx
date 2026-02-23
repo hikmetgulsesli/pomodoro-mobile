@@ -10,6 +10,31 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
+// Helper to create full color scheme with all required properties
+function createColorScheme(isDark: boolean): ColorScheme {
+  const baseColors = isDark ? colors.dark : colors.light;
+  return {
+    primary: baseColors.primary,
+    primaryDark: baseColors.primaryDark,
+    accent: baseColors.accent,
+    accentDark: baseColors.accentDark,
+    background: baseColors.background,
+    surface: baseColors.surface,
+    surfaceAlt: baseColors.surfaceAlt,
+    border: baseColors.border,
+    text: baseColors.text,
+    textMuted: baseColors.textMuted,
+    textSubtle: baseColors.textSubtle,
+    success: baseColors.success,
+    warning: baseColors.warning,
+    error: baseColors.error,
+    info: baseColors.info,
+    timerWork: baseColors.timerWork,
+    timerShortBreak: baseColors.timerShortBreak,
+    timerLongBreak: baseColors.timerLongBreak,
+  };
+}
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 interface ThemeProviderProps {
@@ -20,11 +45,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const systemColorScheme = useColorScheme();
   const [mode, setMode] = useState<ThemeMode>('system');
   
-  const isDark = mode === 'system' 
-    ? systemColorScheme === 'dark' 
+  const isDark = mode === 'system'
+    ? systemColorScheme === 'dark'
     : mode === 'dark';
-  
-  const themeColors = isDark ? colors.dark : colors.light;
+
+  const themeColors = createColorScheme(isDark);
   
   const toggleTheme = () => {
     setMode(prev => {

@@ -152,6 +152,7 @@ export default function TimerScreen() {
       borderRadius: 140,
       borderWidth: 10,
       borderColor: sessionColor,
+      transform: [{ rotate: '-90deg' }],
     },
     timerText: {
       fontSize: 64,
@@ -212,7 +213,14 @@ export default function TimerScreen() {
 
       <Animated.View style={[styles.timerContainer, { transform: [{ scale: pulseAnim }] }]}>
         <View style={styles.circleBackground}>
-          <View style={styles.progressCircle} />
+          <Animated.View
+            style={[
+              styles.progressCircle,
+              {
+                borderDashArray: [280 * Math.PI * progress, 280 * Math.PI],
+              },
+            ]}
+          />
         </View>
         <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
       </Animated.View>

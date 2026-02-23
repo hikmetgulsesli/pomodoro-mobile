@@ -153,4 +153,34 @@ export const timerDefaults = {
 };
 
 export type ThemeMode = 'dark' | 'light' | 'system';
-export type ColorScheme = typeof colors.dark;
+
+// Full color scheme with all properties merged
+export interface ColorScheme {
+  // Primary palette
+  primary: string;
+  primaryDark: string;
+  accent: string;
+  accentDark: string;
+
+  // Surface colors
+  background: string;
+  surface: string;
+  surfaceAlt: string;
+  border: string;
+
+  // Text colors
+  text: string;
+  textMuted: string;
+  textSubtle: string;
+
+  // Status colors
+  success: string;
+  warning: string;
+  error: string;
+  info: string;
+
+  // Timer specific
+  timerWork: string;
+  timerShortBreak: string;
+  timerLongBreak: string;
+}
