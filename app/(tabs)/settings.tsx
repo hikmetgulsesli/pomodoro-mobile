@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useSettings } from '../../src/contexts/TimerContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -6,6 +6,21 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 export default function SettingsScreen() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { colors } = useTheme();
+
+  const handleReset = () => {
+    Alert.alert(
+      'Reset to Defaults',
+      'Are you sure you want to reset all settings to their default values?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Reset', 
+          style: 'destructive',
+          onPress: resetSettings 
+        },
+      ]
+    );
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -164,7 +179,7 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.resetButton} onPress={resetSettings}>
+      <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
         <Text style={styles.resetButtonText}>Reset to Defaults</Text>
       </TouchableOpacity>
     </ScrollView>
