@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import { Audio, AVPlaybackStatus } from 'expo-av';
@@ -49,7 +50,6 @@ const DEFAULT_SETTINGS: Settings = {
   sessionsUntilLongBreak: 4,
   soundEnabled: true,
   vibrationEnabled: true,
-  theme: 'dark',
 };
 
 interface Settings {
@@ -59,7 +59,6 @@ interface Settings {
   sessionsUntilLongBreak: number;
   soundEnabled: boolean;
   vibrationEnabled: boolean;
-  theme: 'dark' | 'light';
 }
 
 interface SettingsContextType {
@@ -81,10 +80,14 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const responseListenerRef = useRef<Notifications.Subscription | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
 
+  // Background timer: store the absolute end time so we can recalculate on foreground
+  const endTimeRef = useRef<number | null>(null);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
   // Initialize notification channel and permissions
   useEffect(() => {
     initializeNotifications();
-    
+
     return () => {
       if (notificationListenerRef.current) {
         Notifications.removeNotificationSubscription(notificationListenerRef.current);
@@ -100,7 +103,6 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const initializeNotifications = async () => {
-    // Configure Android notification channel
     await Notifications.setNotificationChannelAsync('pomodoro-timer', {
       name: 'Pomodoro Timer',
       importance: Notifications.AndroidImportance.HIGH,
@@ -108,13 +110,10 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       lightColor: '#10B981',
       sound: 'default',
     });
-    
-    // Request permissions
+
     await requestNotificationPermissions();
-    
-    // Handle notification tap to bring app to foreground
+
     responseListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      // Notification was tapped - app will automatically come to foreground
       console.log('Notification tapped:', response.notification.request.content.title);
     });
   };
@@ -126,23 +125,35 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Schedule a notification for when the timer completes (fires even when app is backgrounded)
+  const scheduleTimerEndNotification = async (seconds: number) => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    if (seconds <= 0) return;
+
+    const title = currentSession === 'work' ? 'Time for a break!' : 'Ready to focus!';
+    const body = currentSession === 'work'
+      ? 'Great work! Take a break now.'
+      : 'Break is over. Time to work!';
+
+    await Notifications.scheduleNotificationAsync({
+      content: { title, body, data: { sessionType: currentSession } },
+      trigger: { seconds, repeats: false, channelId: 'pomodoro-timer' },
+    });
+  };
+
   // Load and play sound
   const playSound = async () => {
     if (!settings.soundEnabled) return;
-    
+
     try {
-      // Unload previous sound if exists
       await unloadSound();
-      
-      // Create and play new sound
       const { sound } = await Audio.Sound.createAsync(
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('../../assets/sounds/timer-complete.mp3'),
         { shouldPlay: true, volume: 1.0 }
       );
       soundRef.current = sound;
-      
-      // Cleanup after playing
+
       sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
         if (status.isLoaded && status.didJustFinish) {
           unloadSound();
@@ -150,7 +161,6 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (error) {
       console.log('Error playing sound:', error);
-      // Fallback: try system notification sound
       try {
         await Notifications.scheduleNotificationAsync({
           content: { title: 'Timer Complete', body: 'Timer finished' },
@@ -200,11 +210,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         completedAt: new Date().toISOString(),
         status,
       };
-      
+
       const stored = await AsyncStorage.getItem('pomodoro-history');
       const sessions: SessionRecord[] = stored ? JSON.parse(stored) : [];
       sessions.push(session);
-      
+
       await AsyncStorage.setItem('pomodoro-history', JSON.stringify(sessions));
     } catch (e) {
       console.error('Failed to save session:', e);
@@ -228,18 +238,15 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       intervalRef.current = null;
     }
     setIsRunning(false);
+    endTimeRef.current = null;
+    await Notifications.cancelAllScheduledNotificationsAsync();
 
-    // Get the session duration before changing state
     const durationMinutes = Math.floor(getSessionDuration(currentSession) / 60);
 
-    // Play sound and trigger haptic
     await playSound();
     await triggerHaptic();
-
-    // Save session to history
     await saveSession(currentSession, durationMinutes, 'completed');
 
-    // Send notification based on session type
     if (currentSession === 'work') {
       await sendNotification('Time for a break!', 'Great work! Take a break now.');
       if (sessionCount >= settings.sessionsUntilLongBreak) {
@@ -260,6 +267,32 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentSession, sessionCount, settings]);
 
+  // AppState listener: recalculate remaining time when returning from background
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextState === 'active'
+      ) {
+        // Returning to foreground
+        if (isRunning && endTimeRef.current) {
+          const remaining = Math.ceil((endTimeRef.current - Date.now()) / 1000);
+          if (remaining <= 0) {
+            setTimeRemaining(0);
+            handleSessionComplete();
+          } else {
+            setTimeRemaining(remaining);
+          }
+          // Cancel the scheduled background notification — we're back in foreground
+          Notifications.cancelAllScheduledNotificationsAsync();
+        }
+      }
+      appStateRef.current = nextState;
+    });
+
+    return () => subscription.remove();
+  }, [isRunning, handleSessionComplete]);
+
   // Load settings on mount
   useEffect(() => {
     loadSettings();
@@ -270,7 +303,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       const stored = await AsyncStorage.getItem('pomodoro-settings');
       if (stored) {
         const parsed = JSON.parse(stored);
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed, theme: (parsed.theme || 'dark') as 'dark' | 'light' });
+        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
       }
     } catch (e) {
       console.error('Failed to load settings:', e);
@@ -299,29 +332,37 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
   const startTimer = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Set the absolute end time for background tracking
+    endTimeRef.current = Date.now() + timeRemaining * 1000;
     setIsRunning(true);
+    // Schedule a notification that fires when the timer would complete (even if backgrounded)
+    await scheduleTimerEndNotification(timeRemaining);
   };
 
   const pauseTimer = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsRunning(false);
+    endTimeRef.current = null;
+    await Notifications.cancelAllScheduledNotificationsAsync();
   };
 
   const resetTimer = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsRunning(false);
+    endTimeRef.current = null;
     setTimeRemaining(getSessionDuration(currentSession));
+    await Notifications.cancelAllScheduledNotificationsAsync();
   };
 
   const skipSession = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    // Get the session duration before changing state
+
     const durationMinutes = Math.floor(getSessionDuration(currentSession) / 60);
-    
-    // Save skipped session
     await saveSession(currentSession, durationMinutes, 'skipped');
-    
+
+    endTimeRef.current = null;
+    await Notifications.cancelAllScheduledNotificationsAsync();
+
     if (currentSession === 'work') {
       if (sessionCount >= settings.sessionsUntilLongBreak) {
         setCurrentSession('longBreak');
@@ -358,7 +399,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         value={{
           settings,
           updateSettings: async (newSettings) => {
-            const updated = { ...settings, ...newSettings, theme: (newSettings.theme || settings.theme) as 'dark' | 'light' };
+            const updated = { ...settings, ...newSettings };
             setSettings(updated);
             await AsyncStorage.setItem('pomodoro-settings', JSON.stringify(updated));
           },

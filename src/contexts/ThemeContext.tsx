@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, ThemeMode, ColorScheme } from '../constants/theme';
+
+const THEME_STORAGE_KEY = 'pomodoro-theme-mode';
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -18,33 +21,44 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const systemColorScheme = useColorScheme();
-  const [mode, setMode] = useState<ThemeMode>('system');
-  
-  const isDark = mode === 'system' 
-    ? systemColorScheme === 'dark' 
+  const [mode, setModeState] = useState<ThemeMode>('dark');
+
+  const isDark = mode === 'system'
+    ? systemColorScheme === 'dark'
     : mode === 'dark';
-  
+
   const themeColors = isDark ? colors.dark : colors.light;
-  
-  const toggleTheme = () => {
-    setMode(prev => {
-      if (prev === 'dark') return 'light';
-      if (prev === 'light') return 'system';
-      return 'dark';
-    });
-  };
-  
-  // Persist theme preference
+
+  // Load saved theme on mount
   useEffect(() => {
-    // Could add AsyncStorage persistence here
-  }, [mode]);
-  
+    (async () => {
+      try {
+        const saved = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (saved === 'dark' || saved === 'light' || saved === 'system') {
+          setModeState(saved);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const setMode = (newMode: ThemeMode) => {
+    setModeState(newMode);
+    AsyncStorage.setItem(THEME_STORAGE_KEY, newMode).catch(() => {});
+  };
+
+  const toggleTheme = () => {
+    const next: ThemeMode = mode === 'dark' ? 'light' : mode === 'light' ? 'system' : 'dark';
+    setMode(next);
+  };
+
   return (
-    <ThemeContext.Provider 
-      value={{ 
-        mode, 
-        setMode, 
-        isDark, 
+    <ThemeContext.Provider
+      value={{
+        mode,
+        setMode,
+        isDark,
         colors: themeColors,
         toggleTheme,
       }}

@@ -5,7 +5,7 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function SettingsScreen() {
   const { settings, updateSettings, resetSettings } = useSettings();
-  const { colors } = useTheme();
+  const { colors, isDark, setMode } = useTheme();
 
   const handleReset = () => {
     Alert.alert(
@@ -13,10 +13,13 @@ export default function SettingsScreen() {
       'Are you sure you want to reset all settings to their default values?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Reset', 
+        {
+          text: 'Reset',
           style: 'destructive',
-          onPress: resetSettings 
+          onPress: () => {
+            resetSettings();
+            setMode('dark');
+          },
         },
       ]
     );
@@ -171,8 +174,8 @@ export default function SettingsScreen() {
         <View style={styles.toggleSetting}>
           <Text style={styles.label}>Dark Theme</Text>
           <Switch
-            value={settings.theme === 'dark'}
-            onValueChange={(value) => updateSettings({ theme: value ? 'dark' : 'light' })}
+            value={isDark}
+            onValueChange={(value) => setMode(value ? 'dark' : 'light')}
             trackColor={{ false: colors.surfaceAlt, true: colors.primary }}
             thumbColor={colors.text}
           />
