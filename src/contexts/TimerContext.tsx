@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
-import * as Audio from 'expo-av';
+import { Audio, AVPlaybackStatus } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Session record type for history
@@ -103,7 +103,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     // Configure Android notification channel
     await Notifications.setNotificationChannelAsync('pomodoro-timer', {
       name: 'Pomodoro Timer',
-      importance: Notifications.AndroidImportance.High,
+      importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#10B981',
       sound: 'default',
@@ -143,7 +143,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       soundRef.current = sound;
       
       // Cleanup after playing
-      sound.setOnPlaybackStatusUpdate((status) => {
+      sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
         if (status.isLoaded && status.didJustFinish) {
           unloadSound();
         }
