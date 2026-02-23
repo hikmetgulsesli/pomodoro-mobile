@@ -1,41 +1,29 @@
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
-
-function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    index: '⏱',
-    history: '📊',
-    settings: '⚙️',
-  };
-  
-  return (
-    <View style={styles.iconContainer}>
-      <Text style={[styles.icon, focused && styles.iconFocused]}>
-        {icons[name] || '●'}
-      </Text>
-    </View>
-  );
-}
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+  
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#e94560',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: colors.accent || '#f43f5e',
+        tabBarInactiveTintColor: colors.textMuted || '#666',
         tabBarStyle: {
-          backgroundColor: '#1a1a2e',
-          borderTopColor: '#333',
+          backgroundColor: colors.surface || '#1a1a2e',
+          borderTopColor: colors.border || '#333',
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
         },
         headerStyle: {
-          backgroundColor: '#1a1a2e',
+          backgroundColor: colors.surface || '#1a1a2e',
         },
-        headerTintColor: '#fff',
+        headerTintColor: colors.text || '#fff',
         headerTitleStyle: {
           fontWeight: 'bold',
+          fontFamily: 'Sora',
         },
       }}
     >
@@ -43,37 +31,29 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Timer',
-          tabBarIcon: ({ focused }) => <TabIcon name="index" focused={focused} />,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="timer-outline" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ focused }) => <TabIcon name="history" focused={focused} />,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="chart-bar" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ focused }) => <TabIcon name="settings" focused={focused} />,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="cog-outline" size={size} color={color} />
+          ),
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 20,
-    opacity: 0.6,
-  },
-  iconFocused: {
-    opacity: 1,
-  },
-});

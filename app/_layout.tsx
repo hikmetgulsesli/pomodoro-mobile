@@ -1,14 +1,27 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { TimerProvider } from '../src/contexts/TimerContext';
+import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 
-export default function RootLayout() {
+function RootLayoutNav() {
+  const { isDark } = useTheme();
+  
   return (
-    <TimerProvider>
-      <StatusBar style="light" />
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
-    </TimerProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <TimerProvider>
+        <RootLayoutNav />
+      </TimerProvider>
+    </ThemeProvider>
   );
 }

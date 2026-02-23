@@ -6,7 +6,7 @@ export default [
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
-    ignores: ['node_modules/', 'dist/', '.expo/', '*.config.ts'],
+    ignores: ['node_modules/', 'dist/', '.expo/', '*.config.ts', '.worktrees/'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
